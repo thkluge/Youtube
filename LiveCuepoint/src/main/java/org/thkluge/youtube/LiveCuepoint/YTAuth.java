@@ -14,7 +14,9 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.store.DataStore;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.List;
@@ -28,8 +30,10 @@ public class YTAuth
   public static Credential authorize(List<String> scopes, String credentialDatastore)
     throws IOException
   {
-	  
-    Reader clientSecretReader = new InputStreamReader(YTAuth.class.getResourceAsStream("/client_secret.json"));
+	String path = System.getProperty("user.home").concat(File.separator).concat(LiveCuepointInserter.PROPERTY_DIR).concat(File.separator);
+	 
+	InputStream inStream = new FileInputStream(path.concat("client_secrets.json"));
+    Reader clientSecretReader = new InputStreamReader(inStream);
     GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, clientSecretReader);
     
     if ((clientSecrets.getDetails().getClientId().startsWith("Enter")) || 

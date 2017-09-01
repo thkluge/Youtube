@@ -10,6 +10,8 @@ import java.io.OutputStream;
 import java.util.List;
 import java.util.Properties;
 
+import org.apache.log4j.Logger;
+
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.repackaged.com.google.common.base.Strings;
 import com.google.api.services.youtube.YouTube;
@@ -28,10 +30,12 @@ import com.google.common.collect.Lists;
  */
 public class LiveCuepointInserter 
 {
+	private final static Logger log = Logger.getLogger(LiveCuepointInserter.class);
+	
 	private static String APPLICATION_NAME = "LiveCueInserter";
 	private static List<String> scopes = Lists.newArrayList(YouTubePartnerScopes.YOUTUBEPARTNER, YouTubeScopes.YOUTUBE, YouTubeScopes.YOUTUBE_FORCE_SSL);
 	
-	private static String PROPERTY_DIR = "YTHelper";
+	public static String PROPERTY_DIR = "YTHelper";
 	private static String PROPERTY_FILE = "ythelper.properties";
 	private static String PROP_CONTENT_OWNER_ID = "CONTENT_OWNER_ID";
 	private static String PROP_CONTENT_OWNER_ID_DEFAULT = "Please insert your external Content Owner ID here.";
@@ -45,7 +49,9 @@ public class LiveCuepointInserter
 	
     public static void main( String[] args ) throws IOException, InterruptedException
     {
+    	log.info("Start LiveCuepointInserter.");
     	Properties prop = initProperties();
+    	log.info("Load Credentials.");
         Credential credential = YTAuth.authorize(scopes, "insertMidroll");
         
         initYTAPI(credential);
@@ -55,34 +61,32 @@ public class LiveCuepointInserter
         
         if(!Strings.isNullOrEmpty(videoID)){
         	if(Boolean.valueOf(prop.getProperty(PROP_INSERT_SLATE, "true"))){
+        		log.info(String.format("Insert Slate for Video %s", videoID));
         		changeSlateStatus(videoID, true);
         	}
         	
         	insertMidroll(videoID, prop.getProperty(PROP_CHANNEL_ID), prop.getProperty(PROP_CONTENT_OWNER_ID));
         	
         	if(Boolean.valueOf(prop.getProperty(PROP_INSERT_SLATE, "true"))){
+        		log.info("Wait for 30 seconds");
         		Thread.sleep(30000);	
+        		log.info(String.format("Remove Slate for Video %s", videoID));
         		changeSlateStatus(videoID, false);
         	}
         }
     }
     
     private static Properties initProperties() throws IOException {
+    	log.info("Start loading Properties");
 		Properties prop = new Properties();
 		
-		String path = System.getProperty("user.dir").concat(File.separator).concat(PROPERTY_DIR).concat(File.separator);
+		String path = System.getProperty("user.home").concat(File.separator).concat(PROPERTY_DIR).concat(File.separator);
+		log.info(String.format("Search for file %s in folder %s", PROPERTY_FILE, path));
 		
 		InputStream inStream;
 		try {
 			inStream = new FileInputStream(path.concat(PROPERTY_FILE));
 			prop.load(inStream);
-			
-			if(prop.getProperty(PROP_CHANNEL_ID).equals(PROP_CHANNEL_ID_DEFAULT)){
-				
-			}
-			if(prop.getProperty(PROP_CONTENT_OWNER_ID).equals(PROP_CONTENT_OWNER_ID_DEFAULT)){
-				
-			}
 			
 		} catch (FileNotFoundException e) {
 			prop.setProperty(PROP_CONTENT_OWNER_ID, PROP_CONTENT_OWNER_ID_DEFAULT);
@@ -91,25 +95,41 @@ public class LiveCuepointInserter
 			
 			OutputStream out = new FileOutputStream(path.concat(PROPERTY_FILE));
 			prop.store(out, null);
+			log.error(String.format("Could not find property file. Generating Default Property file. Please open the file %s and insert information.", path.concat(PROPERTY_FILE)));
 		}
+		
+		if(prop.getProperty(PROP_CHANNEL_ID).equals(PROP_CHANNEL_ID_DEFAULT)){
+			log.error("Channel ID is still default value. Please insert the ID of your YT channel in the property file.");
+		}
+		if(prop.getProperty(PROP_CONTENT_OWNER_ID).equals(PROP_CONTENT_OWNER_ID_DEFAULT)){
+
+			log.error("Content OWner ID is still default value. Please insert the ID of your YT Content Owner in the property file.");
+		}
+		
 		return prop;
 	}
 
 	private static void initYTAPI(Credential credential){
+		log.info("Init YouTube API");
     	youtube = new YouTube.Builder(YTAuth.HTTP_TRANSPORT, YTAuth.JSON_FACTORY, credential).setApplicationName(APPLICATION_NAME).build();
     }
     
     private static void initYTPartnerAPI(Credential credential){
+    	log.info("Init YouTube Partner API");
     	youTubePartner = new YouTubePartner.Builder(YTAuth.HTTP_TRANSPORT, YTAuth.JSON_FACTORY, credential).setApplicationName(APPLICATION_NAME).build();
     }
     
     private static String getCurrentLiveStreamID() throws IOException{
+    	log.info("Search current Live Stream");
     	YouTube.LiveBroadcasts.List liveBroadcastRequest = youtube.liveBroadcasts().list("id").setBroadcastStatus("active").setBroadcastType("all");
     	LiveBroadcastListResponse returnedListResponse = liveBroadcastRequest.execute();
     	
     	if(returnedListResponse.getItems().size() == 1){
-    		return returnedListResponse.getItems().get(0).getId();
+    		String videoID = returnedListResponse.getItems().get(0).getId();
+    		log.info(String.format("Found one live stream with video id %s", videoID));
+    		return videoID;
     	}else{
+    		log.error(String.format("Found %s live streams. Not sure what do to. No Midrolls will be inserted", returnedListResponse.getItems().size()));
     		return null;
     	}
     }
@@ -122,18 +142,19 @@ public class LiveCuepointInserter
     }
     
     private static void insertMidroll(String videoID, String channelID, String contentOwnerID) throws IOException{
-    	
-
+    	log.info(String.format("Start insert Midroll for video %s on channel %s for content owner %s", videoID, channelID, contentOwnerID));
     	CuepointSettings settings = new CuepointSettings();
     	settings.setCueType("ad");
     	settings.setDurationSecs(30l);
     	
     	LiveCuepoint content = new LiveCuepoint();
-    	content.setId(videoID);
+    	content.setBroadcastId(videoID);
 		content.setSettings(settings);
     	
 		Insert insertCuePoint = youTubePartner.liveCuepoints().insert(channelID, content).setOnBehalfOfContentOwner(contentOwnerID);
-		insertCuePoint.execute();
+		LiveCuepoint result = insertCuePoint.execute();
+		
+		log.info(result.toPrettyString());
     	
     }
     
