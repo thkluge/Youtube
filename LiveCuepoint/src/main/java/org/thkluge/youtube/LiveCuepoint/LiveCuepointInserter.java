@@ -23,6 +23,7 @@ import com.google.api.services.youtubePartner.YouTubePartnerScopes;
 import com.google.api.services.youtubePartner.model.CuepointSettings;
 import com.google.api.services.youtubePartner.model.LiveCuepoint;
 import com.google.common.collect.Lists;
+import com.google.common.io.Files;
 
 /**
  * Hello world!
@@ -93,6 +94,7 @@ public class LiveCuepointInserter
 			prop.setProperty(PROP_CHANNEL_ID, PROP_CHANNEL_ID_DEFAULT);
 			prop.setProperty(PROP_INSERT_SLATE, PROP_INSERT_SLATE_DEFAULT);
 			
+			new File(path).mkdirs();
 			OutputStream out = new FileOutputStream(path.concat(PROPERTY_FILE));
 			prop.store(out, null);
 			log.error(String.format("Could not find property file. Generating Default Property file. Please open the file %s and insert information.", path.concat(PROPERTY_FILE)));
