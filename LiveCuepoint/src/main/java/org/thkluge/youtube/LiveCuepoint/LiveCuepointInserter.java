@@ -58,12 +58,12 @@ public class LiveCuepointInserter
         initYTAPI(credential);
         initYTPartnerAPI(credential);
         
-        String videoID = getCurrentLiveStreamID();
+        String videoID = getCurrentLiveStreamID(prop.getProperty(PROP_CHANNEL_ID), prop.getProperty(PROP_CONTENT_OWNER_ID));
         
         if(!Strings.isNullOrEmpty(videoID)){
         	if(Boolean.valueOf(prop.getProperty(PROP_INSERT_SLATE, "true"))){
         		log.info(String.format("Insert Slate for Video %s", videoID));
-        		changeSlateStatus(videoID, true);
+        		changeSlateStatus(videoID, prop.getProperty(PROP_CHANNEL_ID), prop.getProperty(PROP_CONTENT_OWNER_ID), true);
         	}
         	
         	insertMidroll(videoID, prop.getProperty(PROP_CHANNEL_ID), prop.getProperty(PROP_CONTENT_OWNER_ID));
@@ -72,7 +72,7 @@ public class LiveCuepointInserter
         		log.info("Wait for 30 seconds");
         		Thread.sleep(30000);	
         		log.info(String.format("Remove Slate for Video %s", videoID));
-        		changeSlateStatus(videoID, false);
+        		changeSlateStatus(videoID, prop.getProperty(PROP_CHANNEL_ID), prop.getProperty(PROP_CONTENT_OWNER_ID), false);
         	}
         }
     }
@@ -121,9 +121,14 @@ public class LiveCuepointInserter
     	youTubePartner = new YouTubePartner.Builder(YTAuth.HTTP_TRANSPORT, YTAuth.JSON_FACTORY, credential).setApplicationName(APPLICATION_NAME).build();
     }
     
-    private static String getCurrentLiveStreamID() throws IOException{
+    private static String getCurrentLiveStreamID(String channelID, String contentOwnerID) throws IOException{
     	log.info("Search current Live Stream");
-    	YouTube.LiveBroadcasts.List liveBroadcastRequest = youtube.liveBroadcasts().list("id").setBroadcastStatus("active").setBroadcastType("all");
+    	YouTube.LiveBroadcasts.List liveBroadcastRequest = youtube.liveBroadcasts().
+    																list("id").
+    																setBroadcastStatus("active").
+    																setBroadcastType("all").
+    																setOnBehalfOfContentOwner(contentOwnerID).
+    																setOnBehalfOfContentOwnerChannel(channelID);
     	LiveBroadcastListResponse returnedListResponse = liveBroadcastRequest.execute();
     	
     	if(returnedListResponse.getItems().size() == 1){
@@ -136,9 +141,13 @@ public class LiveCuepointInserter
     	}
     }
     
-    private static void changeSlateStatus(String videoID, boolean showSlide) throws IOException{
+    private static void changeSlateStatus(String videoID, String channelID, String contentOwnerID, boolean showSlide) throws IOException{
     	
-    	YouTube.LiveBroadcasts.Control control = youtube.liveBroadcasts().control(videoID, "id").setDisplaySlate(showSlide);
+    	YouTube.LiveBroadcasts.Control control = youtube.liveBroadcasts().
+    														control(videoID, "id").
+    														setDisplaySlate(showSlide).
+    														setOnBehalfOfContentOwner(contentOwnerID).
+															setOnBehalfOfContentOwnerChannel(channelID);;
     	control.execute();
     	
     }
