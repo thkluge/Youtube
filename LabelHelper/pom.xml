@@ -3,15 +3,17 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.thkluge.youtube</groupId>
-  <artifactId>LiveCuepoint</artifactId>
-  <version>0.0.2</version>
+  <artifactId>LabelHelper</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>LiveCuepoint</name>
+  <name>LabelHelper</name>
   <url>http://maven.apache.org</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
 
   <dependencies>
@@ -20,28 +22,22 @@
 	<dependency>
 	    <groupId>com.google.apis</groupId>
 	    <artifactId>google-api-services-youtube</artifactId>
-	    <version>v3-rev181-1.22.0</version>
+	    <version>v3-rev187-1.23.0</version>
 	</dependency>
 	
 	<!-- https://mvnrepository.com/artifact/com.google.oauth-client/google-oauth-client -->
 	<dependency>
 	    <groupId>com.google.oauth-client</groupId>
 	    <artifactId>google-oauth-client</artifactId>
-	    <version>1.22.0</version>
+	    <version>1.23.0</version>
 	</dependency>
 	
 	<dependency>
 	    <groupId>com.google.oauth-client</groupId>
 	    <artifactId>google-oauth-client-jetty</artifactId>
-	    <version>1.22.0</version>
+	    <version>1.23.0</version>
 	</dependency>
-	
-	<dependency>
-	    <groupId>com.google.api </groupId>
-	    <artifactId>google-api-services-youtubePartner</artifactId>
-	    <version>1.22.0</version>
-	</dependency>
-	
+
 	<dependency>
 		<groupId>log4j</groupId>
 		<artifactId>log4j</artifactId>
@@ -54,10 +50,22 @@
       <version>3.8.1</version>
       <scope>test</scope>
     </dependency>
+    
+    <dependency>
+    	<groupId>com.google.guava</groupId>
+    	<artifactId>guava</artifactId>
+    	<version>19.0</version>
+    </dependency>
+
+    <dependency>
+    	<groupId>com.opencsv</groupId>
+    	<artifactId>opencsv</artifactId>
+    	<version>4.0</version>
+    </dependency>
   </dependencies>
   
   <build>
-		<finalName>LiveCuePointInserter</finalName>
+		<finalName>LabelHelper</finalName>
 		<plugins>
 
 		<!-- Maven Shade Plugin -->
@@ -76,7 +84,7 @@
 			  <transformers>
 				<!-- add Main-Class to manifest file -->
                     <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-					<mainClass>org.thkluge.youtube.LiveCuepoint.LiveCuepointInserter</mainClass>
+					<mainClass>org.thkluge.youtube.LabelHelper.LabelHelper</mainClass>
 				</transformer>
 			  </transformers>
 			</configuration>
@@ -86,5 +94,4 @@
 
 		</plugins>
 	</build>
-  
 </project>
