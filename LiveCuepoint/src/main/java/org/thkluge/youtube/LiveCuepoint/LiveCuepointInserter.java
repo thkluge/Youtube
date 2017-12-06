@@ -53,28 +53,36 @@ public class LiveCuepointInserter
     	log.info("Start LiveCuepointInserter.");
     	Properties prop = initProperties();
     	log.info("Load Credentials.");
-        Credential credential = YTAuth.authorize(scopes, "insertMidroll");
+    	try{
+    		Credential credential = YTAuth.authorize(scopes, "insertMidroll");
+    		
+    		initYTAPI(credential);
+    		initYTPartnerAPI(credential);
+    		
+    		String videoID = getCurrentLiveStreamID(prop.getProperty(PROP_CHANNEL_ID), prop.getProperty(PROP_CONTENT_OWNER_ID));
+    		
+    		if(!Strings.isNullOrEmpty(videoID)){
+    			if(Boolean.valueOf(prop.getProperty(PROP_INSERT_SLATE, "true"))){
+    				log.info(String.format("Insert Slate for Video %s", videoID));
+    				changeSlateStatus(videoID, prop.getProperty(PROP_CHANNEL_ID), prop.getProperty(PROP_CONTENT_OWNER_ID), true);
+    			}
+    			
+    			insertMidroll(videoID, prop.getProperty(PROP_CHANNEL_ID), prop.getProperty(PROP_CONTENT_OWNER_ID));
+    			
+    			if(Boolean.valueOf(prop.getProperty(PROP_INSERT_SLATE, "true"))){
+    				log.info("Wait for 30 seconds");
+    				Thread.sleep(30000);	
+    				log.info(String.format("Remove Slate for Video %s", videoID));
+    				changeSlateStatus(videoID, prop.getProperty(PROP_CHANNEL_ID), prop.getProperty(PROP_CONTENT_OWNER_ID), false);
+    			}
+    		}
+    		
+    	}catch(IOException e){
+    		log.error("Error occured during Authentication. Please check error details below.");
+    		log.error(e);
+    		throw e;
+    	}
         
-        initYTAPI(credential);
-        initYTPartnerAPI(credential);
-        
-        String videoID = getCurrentLiveStreamID(prop.getProperty(PROP_CHANNEL_ID), prop.getProperty(PROP_CONTENT_OWNER_ID));
-        
-        if(!Strings.isNullOrEmpty(videoID)){
-        	if(Boolean.valueOf(prop.getProperty(PROP_INSERT_SLATE, "true"))){
-        		log.info(String.format("Insert Slate for Video %s", videoID));
-        		changeSlateStatus(videoID, prop.getProperty(PROP_CHANNEL_ID), prop.getProperty(PROP_CONTENT_OWNER_ID), true);
-        	}
-        	
-        	insertMidroll(videoID, prop.getProperty(PROP_CHANNEL_ID), prop.getProperty(PROP_CONTENT_OWNER_ID));
-        	
-        	if(Boolean.valueOf(prop.getProperty(PROP_INSERT_SLATE, "true"))){
-        		log.info("Wait for 30 seconds");
-        		Thread.sleep(30000);	
-        		log.info(String.format("Remove Slate for Video %s", videoID));
-        		changeSlateStatus(videoID, prop.getProperty(PROP_CHANNEL_ID), prop.getProperty(PROP_CONTENT_OWNER_ID), false);
-        	}
-        }
     }
     
     private static Properties initProperties() throws IOException {
@@ -129,16 +137,23 @@ public class LiveCuepointInserter
     																setBroadcastType("all").
     																setOnBehalfOfContentOwner(contentOwnerID).
     																setOnBehalfOfContentOwnerChannel(channelID);
-    	LiveBroadcastListResponse returnedListResponse = liveBroadcastRequest.execute();
-    	
-    	if(returnedListResponse.getItems().size() == 1){
-    		String videoID = returnedListResponse.getItems().get(0).getId();
-    		log.info(String.format("Found one live stream with video id %s", videoID));
-    		return videoID;
-    	}else{
-    		log.error(String.format("Found %s live streams. Not sure what do to. No Midrolls will be inserted", returnedListResponse.getItems().size()));
-    		return null;
+    	try{
+    		LiveBroadcastListResponse returnedListResponse = liveBroadcastRequest.execute();
+    		
+    		if(returnedListResponse.getItems().size() == 1){
+    			String videoID = returnedListResponse.getItems().get(0).getId();
+    			log.info(String.format("Found one live stream with video id %s", videoID));
+    			return videoID;
+    		}else{
+    			log.error(String.format("Found %s live streams. Not sure what do to. No Midrolls will be inserted", returnedListResponse.getItems().size()));
+    			return null;
+    		}
+    	}catch(IOException e){
+    		log.error("Error occured during YouTube.LiveBroadcasts.List request. Please check error details below.");
+    		log.error(e);
+    		throw e;
     	}
+    	
     }
     
     private static void changeSlateStatus(String videoID, String channelID, String contentOwnerID, boolean showSlide) throws IOException{
@@ -147,8 +162,14 @@ public class LiveCuepointInserter
     														control(videoID, "id").
     														setDisplaySlate(showSlide).
     														setOnBehalfOfContentOwner(contentOwnerID).
-															setOnBehalfOfContentOwnerChannel(channelID);;
-    	control.execute();
+															setOnBehalfOfContentOwnerChannel(channelID);
+    	try{
+    		control.execute();
+    	}catch(IOException e){
+    		log.error("Error occured during YouTube.LiveBroadcasts.Control request. Please check error details below.");
+    		log.error(e);
+    		throw e;
+    	}
     	
     }
     
@@ -163,9 +184,15 @@ public class LiveCuepointInserter
 		content.setSettings(settings);
     	
 		Insert insertCuePoint = youTubePartner.liveCuepoints().insert(channelID, content).setOnBehalfOfContentOwner(contentOwnerID);
-		LiveCuepoint result = insertCuePoint.execute();
 		
-		log.info(result.toPrettyString());
+		try{
+			LiveCuepoint result = insertCuePoint.execute();
+			log.info(result.toPrettyString());
+		}catch(IOException e){
+    		log.error("Error occured during InsertCuePoint request. Please check error details below.");
+    		log.error(e);
+    		throw e;
+    	}
     	
     }
     
